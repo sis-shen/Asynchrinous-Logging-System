@@ -1,16 +1,32 @@
 #include "util.hpp"
 #include "level.hpp"
 #include "message.hpp"
+#include "formatter.hpp"
 #include <iostream>
 
 using namespace std;
 
 int main()
 {
-    cout<<"测试字符串转换 FATAL:";
-    cout<<suplog::LogLevel::toString(suplog::LogLevel::Level::FATAL)<<endl;
+    suplog::Formatter fmt;
+    std::string pattern = "[%d{%H:%M:%S}] %m%n";
+    suplog::LogMsg msg={
+        "logger",       //名字
+        "main.cpp",     //文件名
+        22,             //行数
+        "创建套接字失败",//正文
+        suplog::LogLevel::Level::ERROR   //等级
+    };
+    cout<<fmt.format(msg);
     return 0;
 }
+
+// int main()
+// {
+//     cout<<"测试字符串转换 FATAL:";
+//     cout<<suplog::LogLevel::toString(suplog::LogLevel::Level::FATAL)<<endl;
+//     return 0;
+// }
 
 // int main()
 // {
