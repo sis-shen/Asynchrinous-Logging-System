@@ -2,6 +2,7 @@
 #include "level.hpp"
 #include "message.hpp"
 #include "formatter.hpp"
+#include "sink.hpp"
 #include <iostream>
 
 using namespace std;
@@ -17,7 +18,23 @@ int main()
         "创建套接字失败",//正文
         suplog::LogLevel::Level::ERROR   //等级
     };
-    cout<<fmt.format(msg);
+    std::string str = fmt.format(msg);
+
+    std::shared_ptr<suplog::LogSink> lsptr;
+
+    lsptr.reset(new suplog::StdoutSink());
+    lsptr->log(str.c_str(),str.size());
+
+    lsptr.reset(new suplog::FileSink("./testdir/log.log"));
+    lsptr->log(str.c_str(),str.size());
+
+    lsptr.reset(new suplog::RollSink("./testdir/rollsink/log",10));//故意设置小，查看滚动效果
+    string msg1=string(str).append("msg1");
+    string msg2=string(str).append("msg2");
+
+    lsptr->log(msg1.c_str(),msg1.size());
+    lsptr->log(msg2.c_str(),msg2.size());
+
     return 0;
 }
 

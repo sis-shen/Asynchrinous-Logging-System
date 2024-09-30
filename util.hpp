@@ -30,7 +30,7 @@ namespace suplog{
                 //规定找不到就返回".""
                 if(name.empty()) return ".";
 
-                size_t pos = name.find_last_not_of("/\\");//找到最后一个"/"或"\\"
+                size_t pos = name.find_last_of("/\\");//找到最后一个"/"或"\\"
                 return name.substr(0,pos+1);//取得目录的路径
             }
             static void create_directory(const std::string &path)
