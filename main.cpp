@@ -3,6 +3,7 @@
 #include "message.hpp"
 #include "formatter.hpp"
 #include "sink.hpp"
+#include "logger.hpp"
 #include <iostream>
 
 using namespace std;
@@ -20,20 +21,12 @@ int main()
     };
     std::string str = fmt.format(msg);
 
-    std::shared_ptr<suplog::LogSink> lsptr;
+    vector<suplog::LogSink::ptr> sinks;
 
-    lsptr.reset(new suplog::StdoutSink());
-    lsptr->log(str.c_str(),str.size());
+    suplog::Logger::ptr logptr(new suplog::SyncLogger("同步日志器",
+        suplog::Formatter::ptr(new suplog::Formatter()),
+        sinks,suplog::LogLevel::Level::DEBUG) );
 
-    lsptr.reset(new suplog::FileSink("./testdir/log.log"));
-    lsptr->log(str.c_str(),str.size());
-
-    lsptr.reset(new suplog::RollSink("./testdir/rollsink/log",10));//故意设置小，查看滚动效果
-    string msg1=string(str).append("msg1");
-    string msg2=string(str).append("msg2");
-
-    lsptr->log(msg1.c_str(),msg1.size());
-    lsptr->log(msg2.c_str(),msg2.size());
 
     return 0;
 }

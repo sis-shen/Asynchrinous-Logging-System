@@ -3,6 +3,8 @@
 #include "message.hpp"
 #include "formatter.hpp"
 #include "sink.hpp"
+#include "looper.hpp"//不认识？没关系，这个头文件后面才实现
+//looper.h提供了异步日志器类
 #include <vector>
 #include <list>
 #include <atomic>
@@ -145,5 +147,46 @@ namespace suplog{
         Formatter::ptr _formatter;
         std::atomic<LogLevel::Level> _level;
         std::vector<LogSink::ptr> _sinks; 
+    };
+
+    //同步日志器比较简单，所以直接实现了
+    class SyncLogger:public Logger
+    {
+    public:
+        using ptr = std::shared_ptr<SyncLogger>;
+
+        SyncLogger(const std::string& name,
+            Formatter::ptr formatter,
+            std::vector<LogSink::ptr>&sinks,
+            LogLevel::Level level = LogLevel::Level::DEBUG)
+            :Logger(name,formatter,sinks,level){
+                std::cout << LogLevel::toString(level)<<"同步日志器创建成功...\n";
+            }
+
+        private:
+            virtual void logIt(const std::string& msg_str){
+                std::unique_lock<std::mutex> lock(_mutex);//函数结束后自动释放锁
+                if(_sinks.empty()) {return;}
+                for(auto &it:_sinks)
+                    it->log(msg_str.c_str(),msg_str.size());
+            }
+    };
+
+    class LocalLoggerBuilder:public Logger::Builder
+    {
+    public:
+        virtual Logger::ptr build()
+        {
+            if(_logger_name.empty()){
+                std::cout<<"日志器名称不能为空！！";
+                abort();
+            }
+            if(_formatter.get() == nullptr){
+                std::cout<<"当前日志器： "<<_logger_name;
+                std::cout<<" 未检测到⽇志格式,默认设置为: ";
+                std::cout<<" %d{%H:%M:%S}%T%t%T[%p]%T[%c]%T%f:%l%T%m%n\n";
+                _formatter = std::make_shared<Formatter>();
+            }
+        }
     };
 }
