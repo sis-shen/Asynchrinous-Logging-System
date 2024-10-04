@@ -1,33 +1,22 @@
-#include "util.hpp"
-#include "level.hpp"
-#include "message.hpp"
-#include "formatter.hpp"
-#include "sink.hpp"
-#include "logger.hpp"
+#include "suplog.hpp"
 #include <iostream>
 
 using namespace std;
 
 int main()
 {
-    suplog::Formatter fmt;
-    std::string pattern = "[%d{%H:%M:%S}] %m%n";
-    suplog::LogMsg msg={
-        "logger",       //名字
-        "main.cpp",     //文件名
-        22,             //行数
-        "创建套接字失败",//正文
-        suplog::LogLevel::Level::ERROR   //等级
-    };
-    std::string str = fmt.format(msg);
+    std::string path = "./test/rollsink";
+    suplog::LoggerManager& lm = suplog::LoggerManager::getInstance();
 
-    vector<suplog::LogSink::ptr> sinks;
+    suplog::GlobalLoggerBuilder glb;
+    glb.buildLoggerName("test");
+    glb.buildSink<suplog::RollSink>("./test/rollsink",10);
+    glb.buildLoggerType(suplog::Logger::Type::LOGGER_ASYNC);
 
-    suplog::Logger::ptr logptr(new suplog::SyncLogger("同步日志器",
-        suplog::Formatter::ptr(new suplog::Formatter()),
-        sinks,suplog::LogLevel::Level::DEBUG) );
+    suplog::Logger::ptr alogger= glb.build();
+    suplog::Logger::ptr slogger = lm.rootLogger();
 
-
+    LOGD("测试测试测试");
     return 0;
 }
 
