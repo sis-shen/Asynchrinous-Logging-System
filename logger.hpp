@@ -112,6 +112,11 @@ namespace suplog{
                 _formatter = formatter;
             }
 
+            void buidFormatter(const std::string& formatStr){
+                auto formatter = std::make_shared<suplog::Formatter>(formatStr);
+                _formatter = formatter;
+            }
+
             //C++风格不定参数
             template<typename SinkType,typename ...Args>
             void buildSink(Args &&...args){
@@ -284,12 +289,9 @@ namespace suplog{
         Logger::ptr getLogger(const std::string &name)
         {
             std::unique_lock<std::mutex> lock(_mutex);
-            if(hasLogger(name))
-            {
-                auto it = _loggers.find(name);
-                if(it!= _loggers.end())
-                    return it->second;//找到了，返回指针
-            }
+            auto it = _loggers.find(name);
+            if(it!= _loggers.end())
+                return it->second;//找到了，返回指针
             //找不到
             return Logger::ptr();
         }

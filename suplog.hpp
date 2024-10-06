@@ -14,6 +14,11 @@ namespace suplog
         return LoggerManager::getInstance().rootLogger();
     }
 
+    bool hasLogger(const std::string& name)
+    {
+        return LoggerManager::getInstance().hasLogger(name);
+    }
+
     #define WOW 6666
 
     //开始定义宏函数
