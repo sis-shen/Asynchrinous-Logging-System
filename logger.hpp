@@ -15,6 +15,7 @@
 namespace suplog{
     class Logger{
     public:
+        //类内枚举日志器的类型
         enum class Type{
             LOGGER_SYNC = 0,
             LOGGER_ASYNC
@@ -29,19 +30,21 @@ namespace suplog{
         _sinks(sinks.begin(),sinks.end())
         {}
 
-        std::string loggerName(){return _name;}
-        LogLevel::Level loggerLevel(){return _level;}
+        std::string loggerName(){ return _name; }//获取日志器名称
+        LogLevel::Level loggerLevel(){ return _level; }//获取日志器等级
 
-        //使用C语言风格的不定参数
+        //使用C语言风格的不定参数输出日志
+        //接口log位于protected访问限定符下
         //=========start========
+        //各个接口的主要差别在于日志等级不同
         void debug(const char*file,size_t line,const char*fmt,...)
         {
-            if(shouldLog(LogLevel::Level::DEBUG) == false)
+            if(shouldLog(LogLevel::Level::DEBUG) == false)//如果等级不满足日志器最低要求
                 return;
 
             va_list al;
             va_start(al,fmt);//依据fmt从内存中提取可变参数列表
-            log(LogLevel::Level::DEBUG,file,line,fmt,al);//日志输出
+            log(LogLevel::Level::DEBUG,file,line,fmt,al);//日志输出,al向函数传递可变参数列表
             va_end(al);//结束可变参数列表
         }
 
@@ -101,29 +104,58 @@ namespace suplog{
             Builder():_level(LogLevel::Level::DEBUG),
                 _logger_type(Logger::Type::LOGGER_SYNC)
             {}
+            
+            //默认支持以下接口
+            //======start======//
 
-            void buildLoggerName(const std::string& name){_logger_name = name;}
-
-            void buildLoggerLevel(LogLevel::Level level){_level = level;}
-
-            void buildLoggerType(Logger::Type type){_logger_type = type;}
-
-            void buidFormatter(const Formatter::ptr& formatter){
-                _formatter = formatter;
+            //设置日志器名称
+            void buildLoggerName(const std::string& name){ 
+                _logger_name = name;
+                return;
             }
 
+            //设置日志器等级
+            void buildLoggerLevel(LogLevel::Level level){ 
+                _level = level;
+                return;
+            }
+
+            //设置日志器类型
+            void buildLoggerType(Logger::Type type){
+                _logger_type = type;
+                return;
+            }
+
+            //设置日志器格式串
+            void buidFormatter(const Formatter::ptr& formatter){
+                _formatter = formatter;
+                return;
+            }
+
+            //设置日志器格式串-函数重载
             void buidFormatter(const std::string& formatStr){
                 auto formatter = std::make_shared<suplog::Formatter>(formatStr);
                 _formatter = formatter;
+                return;
             }
 
             //C++风格不定参数
+            //增加落地类
             template<typename SinkType,typename ...Args>
             void buildSink(Args &&...args){
                 auto sink = SinkFactory::create<SinkType>(std::forward<Args>(args)...);
                 _sinks.push_back(sink);
+                return;
             }
 
+            //清空落地类列表
+            void clearSink(){
+                _sinks.clear();
+                return;
+            }
+            //======end======//
+
+            //声明抽象接口build，具体实现交给派生类
             virtual Logger::ptr build() = 0;
         protected:
             Logger::Type _logger_type;
@@ -131,41 +163,48 @@ namespace suplog{
             LogLevel::Level _level;
             Formatter::ptr _formatter;
             std::vector<LogSink::ptr> _sinks;
-        };
+        };//=====Build类声明定义结束=======
 
+    //回到Logger类
     protected:
-    bool shouldLog(LogLevel::Level level){return level>= _level;}
+    //根据日志等级，判断是否应该日志输出
+    bool shouldLog(LogLevel::Level level){ return level >= _level; }
 
     void log(LogLevel::Level level,const char*file,
         size_t line,const char*fmt,va_list al)
     {
         char *buf;//可以不初始化
         std::string msg;
+        //将格式化串和可变参数列表生成字符串，并存入buf指向的内存
         int len = vasprintf(&buf,fmt,al);//自动在堆区申请内存
         if(len < 0)
             msg = "格式化日志消息失败!!";
         else 
         {
-            msg.assign(buf,len);
+            msg.assign(buf,len);//转存到msg对象中
             free(buf);//释放空间
         }
 
         //LogMsg(name, file, line, payload, level)
-        LogMsg logmsg(_name,file,line,std::move(msg),level);
+        LogMsg logmsg(_name,file,line,std::move(msg),level);//使用了拷贝构造
         std::string str;
+        //使用logmsg获取输出字符串/输出任务
         str = _formatter->format(logmsg);
-        logIt(std::move(str));
+        logIt(std::move(str));//真正开始执行输出任务。如何调用落地类由派生类具体实现
     }
+
+    //交给派生类实现
     virtual void logIt(const std::string &msg) = 0;
+
     protected:
-        std::mutex _mutex;
+        std::mutex _mutex;//为多线程环境提前准互斥量
         std::string _name;
         Formatter::ptr _formatter;
-        std::atomic<LogLevel::Level> _level;
+        std::atomic<LogLevel::Level> _level;//使用atomic使_level的修改操作原子化
         std::vector<LogSink::ptr> _sinks; 
     };
 
-    //同步日志器比较简单，所以直接实现了
+    //同步日志器
     class SyncLogger:public Logger
     {
     public:
@@ -175,20 +214,27 @@ namespace suplog{
             Formatter::ptr formatter,
             std::vector<LogSink::ptr>&sinks,
             LogLevel::Level level = LogLevel::Level::DEBUG)
-            :Logger(name,formatter,sinks,level){
+            :Logger(name,formatter,sinks,level)
+            {
                 std::cout << LogLevel::toString(level)<<"同步日志器创建成功...\n";
             }
 
         private:
-            virtual void logIt(const std::string& msg_str)override{
+            virtual void logIt(const std::string& msg_str)override
+            {
                  // lock 的析构函数在离开作用域时自动释放互斥锁
                 std::unique_lock<std::mutex> lock(_mutex);
-                if(_sinks.empty()) {return;}
+                if(_sinks.empty()) { return; }//没有落地方向
+
+                //每个落地方向都输出一次
                 for(auto &it:_sinks)
                     it->log(msg_str.c_str(),msg_str.size());
+
+                return;
             }
     };
 
+    //异步日志器
     class AsyncLogger:public Logger
     {
     public:
@@ -207,48 +253,55 @@ namespace suplog{
             }
 
     private:
-        virtual void logIt(const std::string &msg)
+        virtual void logIt(const std::string &msg) override
         {
             _looper->push(msg);//推送消息
+            return;
         }
 
+        //_looper所用的回调函数
         void readLog(Buffer& msg)
         {
-            if(_sinks.empty()){return;}//判空
+            if(_sinks.empty()){ return; }//判空
 
             for(auto &it:_sinks)
             {
                 //调用落地功能
-                it->log(msg.begin(),msg.readAbleSize());
+                it->log(msg.begin(),msg.readAbleSize());//直接一次性输出所有缓存的日志
             }
+            return;
         }
     protected:
         AsyncLooper::ptr _looper;
-    
     };
 
+    //本地日志器建造者
     class LocalLoggerBuilder:public Logger::Builder
     {
     public:
-        virtual Logger::ptr build()
+        virtual Logger::ptr build() override
         {
-            if(_logger_name.empty()){
+            //检测名称是否存在
+            if(_logger_name.empty())
+            {
                 std::cout<<"日志器名称不能为空！！";
                 abort();
             }
+            //检测格式串
             if(_formatter.get() == nullptr){
                 std::cout<<"当前日志器： "<<_logger_name;
                 std::cout<<" 未检测到⽇志格式,默认设置为: ";
                 std::cout<<" %d{%H:%M:%S}%T%t%T[%p]%T[%c]%T%f:%l%T%m%n\n";
                 _formatter = std::make_shared<Formatter>();
             }
+            //检测是否存在落地方向
             if(_sinks.empty())
             {
                 std::cout<<"当前日志器: "<<_logger_name<<"问检测到落地方向，默认为标准输出!\n";
                 _sinks.push_back(std::make_shared<StdoutSink>());
             }
 
-            Logger::ptr lp;
+            Logger::ptr lp;//使用多态
             if(_logger_type == Logger::Type::LOGGER_ASYNC)
             {
                 lp = std::make_shared<AsyncLogger>(_logger_name,_formatter,_sinks,_level);
@@ -270,15 +323,18 @@ namespace suplog{
             return lm;
         }
 
+        //按名字查询某一日志器
         bool hasLogger(const std::string& name)
         {
             std::unique_lock<std::mutex> lock(_mutex);
             auto it = _loggers.find(name);
-            if(it == _loggers.end())
+            if(it == _loggers.end())//找不到
                 return false;
+            //找到了
             return true;
         }
 
+        //新增日志器
         void addLogger(const std::string& name,
             const Logger::ptr logger)
         {
@@ -286,16 +342,18 @@ namespace suplog{
             _loggers.insert(std::make_pair(name,logger));
         }
 
+        //按名字获取日志器的指针
         Logger::ptr getLogger(const std::string &name)
         {
             std::unique_lock<std::mutex> lock(_mutex);
             auto it = _loggers.find(name);
-            if(it!= _loggers.end())
-                return it->second;//找到了，返回指针
-            //找不到
-            return Logger::ptr();
+            if(it == _loggers.end())
+                return Logger::ptr();//找不到
+
+            return it->second;//找到了，返回指针
         }
 
+        //获取根日志器
         Logger::ptr rootLogger()
         {
             std::unique_lock<std::mutex> lock(_mutex);
@@ -315,6 +373,7 @@ namespace suplog{
             _loggers.insert(std::make_pair("root",_root_logger));
         }
 
+        //为单例模式做准备
         LoggerManager(const LoggerManager&) = delete;//删除拷贝构造
         LoggerManager& operator=(const LoggerManager&) = delete;//删除重载
     private:
@@ -350,6 +409,7 @@ namespace suplog{
                 _sinks.push_back(std::make_shared<StdoutSink>());
             }
 
+            //创建日志器s
             Logger::ptr lp;
             if(_logger_type == Logger::Type::LOGGER_SYNC)
             {
@@ -367,4 +427,3 @@ namespace suplog{
         }
     };
 }
-

@@ -2,6 +2,7 @@
 #include "suplog.hpp"
 #include <chrono>//处理时间
 
+//=========测试用头文件============
 
 namespace suplog
 {
@@ -48,8 +49,6 @@ void bench(const std::string& logger_name,size_t thread_num,
     std::cout<<"平均每秒输出: "<<(size_t)(msg_count/max_cost)<<std::endl;
 
 }
-
-
 
 }
 
