@@ -7,6 +7,8 @@
 #include <ctime>
 #include <cassert>
 #include <sys/stat.h>
+#include <sstream>
+#include <iomanip>
 
 //提供各种实用类，内部封装了实用接口
 
@@ -70,6 +72,43 @@ namespace suplog{
                     mkdir(subdir.c_str(),0755);
                     index = pos + 1;
                 }
+            }
+        };
+
+        class header
+        {
+        public:
+            static std::string addHeader(const std::string&raw_str)
+            {
+                //生成长度固定为8的十六进制报头
+                int len = raw_str.size();
+                std::ostringstream oss;
+                oss<< std::hex << std::uppercase << std::setw(8) << std::setfill('0') << len;
+
+                return oss.str()+raw_str;
+            }
+
+            static std::string delHeader(const std::string&pack_str,int* real_len)
+            {
+                std::string head = pack_str.substr(0,8);
+                int len = stoi(head,nullptr,16);
+                if(real_len != nullptr)
+                    *real_len = len;
+                return pack_str.substr(8,len);
+            }
+
+            //读取报头中的长度
+            static int readHeader(const char* str,size_t len)
+            {
+                if(len < 8) return -1;//越界访问
+
+                std::string num_str(str,8);
+                for(auto ch:num_str)
+                {
+                    if(!(('0'<=ch && ch<='9') || ('A'<=ch && ch<='F')))
+                        return -1;//非法字符
+                }
+                return stoi(num_str);
             }
         };
     }

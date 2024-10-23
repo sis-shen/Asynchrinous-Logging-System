@@ -255,20 +255,31 @@ namespace suplog{
     private:
         virtual void logIt(const std::string &msg) override
         {
-            _looper->push(msg);//推送消息
+            std::string header_str = suplog::util::header::addHeader(msg);
+            _looper->push(header_str);//推送消息
             return;
         }
 
         //_looper所用的回调函数
-        void readLog(Buffer& msg)
+        void readLog(Buffer& msg_line)
         {
             if(_sinks.empty()){ return; }//判空
 
-            for(auto &it:_sinks)
+            int cur = 0;
+            while(cur < msg_line.readAbleSize())
             {
-                //调用落地功能
-                it->log(msg.begin(),msg.readAbleSize());//直接一次性输出所有缓存的日志
+                int len = suplog::util::header::readHeader(msg_line.begin()+cur,8);//读取长度
+                cur+=8;//跳过报头
+                std::string msg(msg_line.begin()+cur,len);//提取报文
+                cur+=len;//跳过报文
+
+                for(auto &it:_sinks)
+                {
+                    //调用落地功能
+                    it->log(msg.c_str(),msg.size());//直接一次性输出所有缓存的日志
+                }
             }
+
             return;
         }
     protected:
