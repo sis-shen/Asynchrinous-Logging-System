@@ -255,6 +255,7 @@ namespace suplog{
     private:
         virtual void logIt(const std::string &msg) override
         {
+            //v1.2增加报头封装
             std::string header_str = suplog::util::header::addHeader(msg);
             _looper->push(header_str);//推送消息
             return;
@@ -268,8 +269,10 @@ namespace suplog{
             int cur = 0;
             while(cur < msg_line.readAbleSize())
             {
-                int len = suplog::util::header::readHeader(msg_line.begin()+cur,8);//读取长度
-                cur+=8;//跳过报头
+                //v1.2增加报头解析和字符串拆分
+                int header_len = suplog::util::header::HEADER_LEN;
+                int len = suplog::util::header::readHeader(msg_line.begin()+cur,header_len);//读取长度
+                cur+=header_len;//跳过报头
                 std::string msg(msg_line.begin()+cur,len);//提取报文
                 cur+=len;//跳过报文
 
@@ -295,8 +298,7 @@ namespace suplog{
             //检测名称是否存在
             if(_logger_name.empty())
             {
-                std::cout<<"日志器名称不能为空！！";
-                abort();
+                throw LogException("日志器名称不能为空！！");
             }
             //检测格式串
             if(_formatter.get() == nullptr){
@@ -401,12 +403,14 @@ namespace suplog{
         {
             if(_logger_name.empty())
             {
-                std::cout<<"日志器名称不能为空!!";
-                abort();
+                throw LogException("日志器名称不能为空!!");
             }
 
             //不能有重名的日志器
-            assert(LoggerManager::getInstance().hasLogger(_logger_name) == false);
+            if(LoggerManager::getInstance().hasLogger(_logger_name) == true)
+            {
+                throw LogException("GlobalLoggerBuilder:不能有重名日志器!");
+            }
 
             if(_formatter.get() == nullptr){
                 std::cout<<"当前日志器： "<<_logger_name;
@@ -420,7 +424,7 @@ namespace suplog{
                 _sinks.push_back(std::make_shared<StdoutSink>());
             }
 
-            //创建日志器s
+            //创建日志器
             Logger::ptr lp;
             if(_logger_type == Logger::Type::LOGGER_SYNC)
             {

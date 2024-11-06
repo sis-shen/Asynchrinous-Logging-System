@@ -6,7 +6,7 @@ using namespace std;
 
 int main()
 {
-    string str("this is a msg");
+    throw suplog::LogException("this is an exception");
     return 0;
 }
 

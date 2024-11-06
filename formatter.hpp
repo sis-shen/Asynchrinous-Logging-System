@@ -167,7 +167,11 @@ namespace suplog{
         Formatter(const std::string& pattern = "[%d{%H:%M:%S}][%t][%p][%c][%f:%l] %m%n")
         :_pattern(pattern)
         {
-            assert(parsePattern());//调用成员函数，后面声明
+            //调用成员函数，后面声明
+            if(parsePattern() == false);
+            {
+                throw LogException("Formatter: 找不到格式串！");
+            }
         }
 
         //简单的查看pattern的接口

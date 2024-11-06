@@ -7,6 +7,7 @@
 #include <ctime>
 #include <cassert>
 #include <sys/stat.h>
+//v1.2中额外添加
 #include <sstream>
 #include <iomanip>
 
@@ -78,6 +79,7 @@ namespace suplog{
         class header
         {
         public:
+            static const int HEADER_LEN = 8;
             static std::string addHeader(const std::string&raw_str)
             {
                 //生成长度固定为8的十六进制报头
@@ -90,7 +92,7 @@ namespace suplog{
 
             static std::string delHeader(const std::string&pack_str,int* real_len)
             {
-                std::string head = pack_str.substr(0,8);
+                std::string head = pack_str.substr(0,HEADER_LEN);
                 int len = stoi(head,nullptr,16);
                 if(real_len != nullptr)
                     *real_len = len;
@@ -102,7 +104,7 @@ namespace suplog{
             {
                 if(len < 8) return -1;//越界访问
 
-                std::string num_str(str,8);
+                std::string num_str(str,HEADER_LEN);
                 for(auto ch:num_str)
                 {
                     if(!(('0'<=ch && ch<='9') || ('A'<=ch && ch<='F')))

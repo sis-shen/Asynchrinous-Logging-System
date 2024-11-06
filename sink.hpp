@@ -3,6 +3,7 @@
 #include "util.hpp"
 #include "message.hpp"
 #include "formatter.hpp"
+#include "logexception.hpp"
 #include <unistd.h>
 #include <iostream>
 #include <memory>
@@ -43,8 +44,10 @@ namespace suplog{
             //创建目录
             util::file::create_directory(util::file::path(filename));
             _ofs.open(_filename,std::ios::binary|std::ios::app);//二进制方式写入
-            //打开文件失败就assert,待改成抛异常
-            assert(_ofs.is_open());
+            if(_ofs.is_open() == false)
+            {
+                throw LogException("FileSink: open file failed");//文件打开失败
+            }
         }
 
         //提供给外界获取文件名
@@ -57,7 +60,7 @@ namespace suplog{
             if(_ofs.good() == false)
             {
                 //文件流状态异常
-                std::cout<<"日志输出文件失败!\n";
+                throw LogException("FileSink:日志文件输出失败！");
             }
             return;
         }
@@ -85,7 +88,7 @@ namespace suplog{
             _ofs.write(data,len);//写入数据
             if(_ofs.good() == false)
             {
-                std::cout<<"日志输出文件失败!\n";
+                throw LogException("RollSink: 日志文件输出失败！");
             }
             _cur_fsize += len;//更新文件大小
             return;
@@ -100,7 +103,10 @@ namespace suplog{
                 if(_cur_fsize >=_max_fsize) sleep(1);//防止同一秒有过多日志消息要打印，导致打开同一个日志文件
                 std::string name = createFilename();
                 _ofs.open(name,std::ios::binary | std::ios::app);
-                assert(_ofs.is_open());
+                if(_ofs.is_open() == false)
+                {
+                    throw LogException("RollSink: init LogFile failed");
+                }
                 _cur_fsize = 0;//创建新文件后，重置文件大小
                 return;
             }

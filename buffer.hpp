@@ -36,7 +36,10 @@ public:
     void push(const char*data,size_t len)
     {
         ensureEnoughSpace(len);
-        assert(len<=writeAbleSize());
+        if(len > writeAbleSize())
+        {
+            throw LogException("Buffer: 可写入空间不足！");
+        }
         std::copy(data,data+len,&_v[_writer_idx]);
         _writer_idx+=len;
     }
@@ -45,7 +48,10 @@ public:
     void pop(size_t len)
     {
         _reader_idx +=len;
-        assert(_reader_idx <=_writer_idx);
+        if(_reader_idx > _writer_idx)
+        {
+            throw LogException("Buffer:试图弹出超限!");
+        }
     }
 
     const char* begin() 
