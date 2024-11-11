@@ -3,6 +3,7 @@
 #include "util.hpp"
 #include "level.hpp"
 #include "message.hpp"
+#include "logexception.hpp"
 #include <memory>
 #include <vector>
 #include <tuple> //提供一种存储一组不同类型变量的容器
