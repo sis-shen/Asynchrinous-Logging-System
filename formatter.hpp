@@ -168,10 +168,9 @@ namespace suplog{
         Formatter(const std::string& pattern = "[%d{%H:%M:%S}][%t][%p][%c][%f:%l] %m%n")
         :_pattern(pattern)
         {
-            //调用成员函数，后面声明
-            if(parsePattern() == false);
+            if(parsePattern() == false)
             {
-                throw LogException("Formatter: 找不到格式串！");
+                throw LogException("Formatter: 无法解析格式串！");
             }
         }
 
@@ -179,7 +178,7 @@ namespace suplog{
         const std::string pattern() { return _pattern; }
         //最后实现，但是是最常用的接口，故写在前面
         //使用LogMsg对象生成日志字符串
-        std::string format(const LogMsg& msg)
+        virtual std::string format(const LogMsg& msg)   //改为虚函数，允许子类重写
         {
             std::stringstream ss;//创建string流
             //按格式串生成日志信息
@@ -294,6 +293,7 @@ namespace suplog{
             if(format_key.empty() == false)//格式化字符不为空，注，上下顺序不能换,要和循环内一致
                 arry.push_back(std::make_tuple(format_key,format_val,1));
 
+
             //开始产生item列表
             if(_items.empty() == false)_items.clear();//清理_items
             for(auto& it:arry)
@@ -310,7 +310,8 @@ namespace suplog{
                                                     std::get<1>(it));
                     if(fi.get() == nullptr)
                     {
-                        std::cout<<"没有对应的格式化字符串： %"
+                        //cout改cerr,防止缓冲区未刷新
+                        std::cerr<<"没有对应的格式化字符串： %"
                                  <<std::get<0>(it)
                                  <<std::endl;
                         return false;
@@ -321,9 +322,48 @@ namespace suplog{
             return true;
         }
 
-    private:
+    protected:
         std::string _pattern;//储存格式串
         std::vector<FormatItem::ptr> _items;//产生格式化字符串的生成器列表
     };
 
+    class DBFormatter:public Formatter
+    {
+    public:
+        using ptr = std::shared_ptr<DBFormatter>;
+        //需要传入values后面括号内的内容，与数据库的表相对应
+        DBFormatter(const std::string&tableName = "",const std::string& pattern = "%d{%Y/%m/%d %H:%M:%S}%p%t%c%f%l%m")
+        :_tableName(tableName)
+        ,Formatter(pattern)
+        {
+            if(tableName.empty())
+            {
+                throw LogException("DBFormatter: 表名不能为空");
+            }
+        }
+
+        virtual std::string format(const LogMsg& msg) override
+        {
+            std::stringstream ss;//创建string流
+
+            ss<<"insert into "<<_tableName<<" values(";
+            //插入时间戳
+            ss<<"FROM_UNIXTIME(";
+            ss<<std::to_string(msg._ctime);
+            ss<<")";
+            //按格式串生成日志信息,全都用单引号包裹
+            for(auto& it: _items)
+            {
+                //添加逗号间隔和单引号包裹
+                ss<<",\'";
+                it->format(ss,msg);
+                ss<<"\'";
+            }
+            ss<<");";
+            return ss.str();
+        }
+
+    private:
+        std::string _tableName;
+    };
 }

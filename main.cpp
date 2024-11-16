@@ -1,12 +1,42 @@
 #include "suplog.hpp"
 #include "bench.hpp"
+#include "test.hpp"
 #include <iostream>
 
 using namespace std;
 
+// void word(void* arg)
+// {
+//     DBUserConfig::ptr user(DBUserConfig::getInstance());
+//     sql::mysql::MySQL_Driver* driver = sql::mysql::get_driver_instance();
+//     sql::Connection* conn = driver->connect(user->Address(),user->User(),user->Password());
+//     conn->setSchema(user->DataBase());
+//     sql::Statement* stm = conn->createStatement();
+
+//     std::string sql_str("insert into log values(FROM_UNIXTIME(1731732725),'2024/11/16 12:52:05','FATAL','140052844003008','DBLogger','main.cpp','22','测试Fatal日志');");
+//     stm->executeUpdate(sql_str);
+// }
+
+// 数据库落地功能设置
 int main()
 {
-    throw suplog::LogException("this is an exception");
+    // suplog::GlobalLoggerBuilder::ptr glb(new suplog::GlobalLoggerBuilder);
+    // glb->buildFormatter(std::make_shared<suplog::DBFormatter>("log"));
+    // glb->buildLoggerName("DBLogger");
+    // glb->buildLoggerType(suplog::Logger::Type::LOGGER_SYNC);
+    // glb->buildSink<suplog::DatabaseSink>();
+    // glb->buildSink<suplog::StdoutSink>();//DEBUG使用
+    // suplog::Logger::ptr dbLogger= glb->build();
+    // dbLogger->debug("测试Debug日志");
+    // dbLogger->info("测试Info日志");
+    // dbLogger->fatal("测试Fatal日志");
+
+    suplog::DatabaseSink DS;
+
+    std::string str("insert into log values(FROM_UNIXTIME(1731738731),'2024/11/16 14:32:11','FATAL','140348317761216','DBLogger','main.cpp','32','测试Fatal日志');");
+    sleep(1);
+    DS.log(str.c_str(),str.size());
+    sleep(5);
     return 0;
 }
 
@@ -21,12 +51,12 @@ int main()
 
 //     suplog::GlobalLoggerBuilder::ptr glb(new suplog::GlobalLoggerBuilder);
 //     glb->buildLoggerName(logger_name);
-//     glb->buidFormatter("%m%n");
+//     glb->buildFormatter("%m%n");
 //     std::string path = std::string("./testdir/sync")+std::to_string(num)+std::string(".log");
 //     glb->buildSink<suplog::FileSink>(path);
 //     glb->buildLoggerType(suplog::Logger::Type::LOGGER_SYNC);
 //     glb->build();
-    
+
 //     suplog::bench(logger_name,thread_count,msg_len,msg_count);
 //     LOGI("*****************************************************");
 
@@ -42,12 +72,12 @@ int main()
 
 //     suplog::GlobalLoggerBuilder::ptr glb(new suplog::GlobalLoggerBuilder);
 //     glb->buildLoggerName(logger_name);
-//     glb->buidFormatter("%m%n");
+//     glb->buildFormatter("%m%n");
 //     std::string path = std::string("./testdir/async")+std::to_string(num)+std::string(".log");
 //     glb->buildSink<suplog::FileSink>(path);
 //     glb->buildLoggerType(suplog::Logger::Type::LOGGER_ASYNC);
 //     glb->build();
-    
+
 //     suplog::bench(logger_name,thread_count,msg_len,msg_count);
 //     LOGI("*****************************************************");
 
@@ -69,8 +99,7 @@ int main()
 //     return 0;
 // }
 
-
-//功能测试
+// 功能测试
 
 // void loggerTest(const std::string& logger_name)
 // {
@@ -106,7 +135,7 @@ int main()
 // {
 //     suplog::GlobalLoggerBuilder::ptr glb(new suplog::GlobalLoggerBuilder());
 //     glb->buildLoggerName("sync-logger");//设置日志器名称
-//     // glb->buidFormatter("[%d][%c][%f:%l][%p] %m%n");//设置日志输出格式
+//     // glb->buildFormatter("[%d][%c][%f:%l][%p] %m%n");//设置日志输出格式
 //     glb->buildLoggerLevel(suplog::LogLevel::Level::DEBUG);
 //     glb->buildSink<suplog::StdoutSink>();//创建标准输出落地方向
 //     glb->buildSink<suplog::FileSink>("./testdir/logs/sync.log");//创建文件落地方向

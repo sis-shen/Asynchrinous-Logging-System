@@ -127,13 +127,13 @@ namespace suplog{
             }
 
             //设置日志器格式串
-            void buidFormatter(const Formatter::ptr& formatter){
+            void buildFormatter(const Formatter::ptr& formatter){
                 _formatter = formatter;
                 return;
             }
 
             //设置日志器格式串-函数重载
-            void buidFormatter(const std::string& formatStr){
+            void buildFormatter(const std::string& formatStr){
                 auto formatter = std::make_shared<suplog::Formatter>(formatStr);
                 _formatter = formatter;
                 return;

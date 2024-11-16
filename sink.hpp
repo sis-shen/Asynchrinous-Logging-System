@@ -4,10 +4,16 @@
 #include "message.hpp"
 #include "formatter.hpp"
 #include "logexception.hpp"
+#include "DBUserConfig.hpp"
+#include "looper.hpp"
 #include <unistd.h>
 #include <iostream>
 #include <memory>
 #include <mutex>
+#include <queue>
+#include <mysql_driver.h>
+#include <mysql_connection.h>
+#include <cppconn/statement.h>
 
 namespace suplog{
     //声明抽象父类LogSink
@@ -18,6 +24,96 @@ namespace suplog{
         LogSink(){}
         virtual ~LogSink() =default;
         virtual void log(const char*data,size_t len) = 0;//声明统一的log接口
+    };
+
+    //数据库落地
+    class DatabaseSink:public LogSink
+    {
+        static const int QUEUE_MAX_SIZE = 1024;//默认设置消息队列的最大长度
+    public:
+        using ptr = std::shared_ptr<DatabaseSink>;
+        DatabaseSink()
+        :_running(true)
+        ,_t(&DatabaseSink::consumer,this)
+        {}
+
+        //生产者
+        void log(const char*data,size_t len)override
+        {
+            std::unique_lock<std::mutex>lock(_mutex);//加锁
+            if(_msgQueue.size() >= QUEUE_MAX_SIZE)
+            {
+                _push_con.wait(lock,[&]{
+                    return _msgQueue.size()<DatabaseSink::QUEUE_MAX_SIZE;
+                });
+            }
+            //DEBUG
+            std::cout<<"插入数据"<<std::string(data,len)<<std::endl;
+            _msgQueue.push(std::string(data,len));
+            lock.unlock();
+            _pop_con.notify_all();
+        }
+
+        static void consumer(void* arg)
+        {
+            std::cout<<"consumer start"<<std::endl;
+            DatabaseSink* ds = (DatabaseSink*)arg;
+            // DBUserConfig::ptr user(DBUserConfig::getInstance());
+            // sql::mysql::MySQL_Driver* driver = sql::mysql::get_driver_instance();
+            // sql::Connection* conn = driver->connect(user->Address(),user->User(),user->Password());
+            // conn->setSchema(user->DataBase());
+            while(true)
+            {
+                std::unique_lock<std::mutex> lock(ds->_mutex);
+                if(ds->_running == false && ds->_msgQueue.empty())
+                {
+                    return;
+                }
+                ds->_pop_con.wait(lock,[&]{
+                    return !ds->_msgQueue.empty() || !ds->_running;
+                });
+                std::string sql_str = ds->_msgQueue.front();
+                ds->_msgQueue.pop();
+                ds->_push_con.notify_all();
+                lock.unlock();
+
+                // std::string sql_str("insert into log values(FROM_UNIXTIME(1731732725),'2024/11/16 12:52:05','FATAL','140052844003008','DBLogger','main.cpp','22','测试Fatal日志');");
+
+                std::cout<<"提取数据"<<sql_str<<std::endl;
+
+                DBUserConfig::ptr user(DBUserConfig::getInstance());
+                std::cout<<"获取信息"<<std::endl;
+
+                sql::mysql::MySQL_Driver* driver = sql::mysql::get_driver_instance();
+                std::cout<<"获取driver"<<std::endl;
+
+                sql::Connection* conn = driver->connect(user->Address(),user->User(),user->Password());
+                std::cout<<"获取连接"<<std::endl;
+
+                std::cout<<"设置数据库"<<user->DataBase()<<!conn->isClosed()<<std::endl;
+                sql::Statement* stm = conn->createStatement();
+                stm->execute("use MDPLS");
+                stm->execute(sql_str);
+            }
+        }
+
+        ~DatabaseSink()
+        {
+            //关闭连接
+            _running = false;
+            _pop_con.notify_all();
+            _push_con.notify_all();
+            _t.join();
+        }
+
+    private:
+        int _reconnect_cnt;
+        std::mutex _mutex;
+        std::atomic<bool> _running;
+        std::queue<std::string> _msgQueue;
+        std::condition_variable _push_con;
+        std::condition_variable _pop_con;
+        std::thread _t;
     };
 
     //标准输出落地

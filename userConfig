@@ -1,0 +1,7 @@
+{
+   "database" : "MDPLS",
+   "ip" : "47.99.48.121",
+   "password" : "strongPassword",
+   "port" : 3306,
+   "user" : "logSink"
+}
