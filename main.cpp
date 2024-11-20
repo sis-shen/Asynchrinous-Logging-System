@@ -5,39 +5,39 @@
 
 using namespace std;
 
-// void word(void* arg)
-// {
-//     DBUserConfig::ptr user(DBUserConfig::getInstance());
-//     sql::mysql::MySQL_Driver* driver = sql::mysql::get_driver_instance();
-//     sql::Connection* conn = driver->connect(user->Address(),user->User(),user->Password());
-//     conn->setSchema(user->DataBase());
-//     sql::Statement* stm = conn->createStatement();
-
-//     std::string sql_str("insert into log values(FROM_UNIXTIME(1731732725),'2024/11/16 12:52:05','FATAL','140052844003008','DBLogger','main.cpp','22','测试Fatal日志');");
-//     stm->executeUpdate(sql_str);
-// }
-
-// 数据库落地功能设置
+//彩色字体输出测试
 int main()
 {
-    suplog::GlobalLoggerBuilder::ptr glb(new suplog::GlobalLoggerBuilder);
-    glb->buildFormatter(std::make_shared<suplog::DBFormatter>("log"));
-    glb->buildLoggerName("DBLogger");
-    glb->buildLoggerType(suplog::Logger::Type::LOGGER_SYNC);
-    glb->buildSink<suplog::DatabaseSink>();
-    suplog::Logger::ptr dbLogger= glb->build();
-    dbLogger->debug("测试Debug日志");
-
-    for(int i = 0;i<10000;++i)
-    {
-        std::string msg = "测试Debug日志"+ std::to_string(i);
-        std::cout<<"即将输出"<<msg<<endl;
-        dbLogger->debug(msg.c_str());
-    }
-
-    cout<<"主程序退出"<<endl;
+    auto root = suplog::rootLogger();
+    root->debug("测试");
+    root->info("测试");
+    root->warn("测试");
+    root->error("测试");
+    root->fatal("测试");
     return 0;
 }
+
+// // 数据库落地功能测试
+// int main()
+// {
+//     suplog::GlobalLoggerBuilder::ptr glb(new suplog::GlobalLoggerBuilder);
+//     glb->buildFormatter(std::make_shared<suplog::DBFormatter>("log"));
+//     glb->buildLoggerName("DBLogger");
+//     glb->buildLoggerType(suplog::Logger::Type::LOGGER_SYNC);
+//     glb->buildSink<suplog::DatabaseSink>();
+//     suplog::Logger::ptr dbLogger= glb->build();
+//     dbLogger->debug("测试Debug日志");
+
+//     for(int i = 0;i<10000;++i)
+//     {
+//         std::string msg = "测试Debug日志"+ std::to_string(i);
+//         std::cout<<"即将输出"<<msg<<endl;
+//         dbLogger->debug(msg.c_str());
+//     }
+
+//     cout<<"主程序退出"<<endl;
+//     return 0;
+// }
 
 // //性能测试
 // void sync_bench_thread_log(size_t thread_count,

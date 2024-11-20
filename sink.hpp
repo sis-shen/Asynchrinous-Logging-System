@@ -103,7 +103,6 @@ namespace suplog{
         std::mutex _mutex;
         std::condition_variable _push_con;
         std::condition_variable _pop_con;
-        int _reconnect_cnt;
         std::atomic<bool> _running;
         std::queue<std::string> _msgQueue;
         std::thread _t;
@@ -115,11 +114,23 @@ namespace suplog{
     public:
         using ptr = std::shared_ptr<StdoutSink>;
         StdoutSink()=default;
-        
+
         void log(const char*data,size_t len) override
         {
-            std::cout.write(data,len);
+            std::cout<<replaceAllColor(data,len);
             return;//标记函数结尾
+        }
+
+        static inline std::string replaceAllColor(const char*data,size_t len)
+        {
+            std::string str(data,len);
+            str = util::ColorReplace::colorReplace(str,"DEBUG",util::ColorReplace::Color::Green);
+            str = util::ColorReplace::colorReplace(str,"INFO",util::ColorReplace::Color::Blue);
+            str = util::ColorReplace::colorReplace(str,"WARN",util::ColorReplace::Color::Yellow);
+            str = util::ColorReplace::colorReplace(str,"ERROR",util::ColorReplace::Color::Magenta);
+            str = util::ColorReplace::colorReplace(str,"FATAL",util::ColorReplace::Color::Red);
+
+            return str;
         }
     };
 

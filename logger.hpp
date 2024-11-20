@@ -77,7 +77,7 @@ namespace suplog{
 
             va_list al;
             va_start(al,fmt);//依据fmt从内存中提取可变参数列表
-            log(LogLevel::Level::WARN,file,line,fmt,al);//日志输出
+            log(LogLevel::Level::ERROR,file,line,fmt,al);//日志输出
             va_end(al);//结束可变参数列表
         }
 
