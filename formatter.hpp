@@ -332,7 +332,7 @@ namespace suplog{
     public:
         using ptr = std::shared_ptr<DBFormatter>;
         //需要传入values后面括号内的内容，与数据库的表相对应
-        DBFormatter(const std::string&tableName = "",const std::string& pattern = "%d{%Y/%m/%d %H:%M:%S}%p%t%c%f%l%m")
+        DBFormatter(const std::string&tableName = "",const std::string& pattern = "%p%t%c%f%l%m")
         :_tableName(tableName)
         ,Formatter(pattern)
         {
@@ -347,7 +347,7 @@ namespace suplog{
             std::stringstream ss;//创建string流
 
             ss<<"insert into "<<_tableName<<" values(";
-            //插入时间戳
+            //默认插入时间
             ss<<"FROM_UNIXTIME(";
             ss<<std::to_string(msg._ctime);
             ss<<")";

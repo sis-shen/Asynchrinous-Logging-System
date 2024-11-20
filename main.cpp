@@ -20,23 +20,22 @@ using namespace std;
 // 数据库落地功能设置
 int main()
 {
-    // suplog::GlobalLoggerBuilder::ptr glb(new suplog::GlobalLoggerBuilder);
-    // glb->buildFormatter(std::make_shared<suplog::DBFormatter>("log"));
-    // glb->buildLoggerName("DBLogger");
-    // glb->buildLoggerType(suplog::Logger::Type::LOGGER_SYNC);
-    // glb->buildSink<suplog::DatabaseSink>();
-    // glb->buildSink<suplog::StdoutSink>();//DEBUG使用
-    // suplog::Logger::ptr dbLogger= glb->build();
-    // dbLogger->debug("测试Debug日志");
-    // dbLogger->info("测试Info日志");
-    // dbLogger->fatal("测试Fatal日志");
+    suplog::GlobalLoggerBuilder::ptr glb(new suplog::GlobalLoggerBuilder);
+    glb->buildFormatter(std::make_shared<suplog::DBFormatter>("log"));
+    glb->buildLoggerName("DBLogger");
+    glb->buildLoggerType(suplog::Logger::Type::LOGGER_SYNC);
+    glb->buildSink<suplog::DatabaseSink>();
+    suplog::Logger::ptr dbLogger= glb->build();
+    dbLogger->debug("测试Debug日志");
 
-    suplog::DatabaseSink DS;
+    for(int i = 0;i<10000;++i)
+    {
+        std::string msg = "测试Debug日志"+ std::to_string(i);
+        std::cout<<"即将输出"<<msg<<endl;
+        dbLogger->debug(msg.c_str());
+    }
 
-    std::string str("insert into log values(FROM_UNIXTIME(1731738731),'2024/11/16 14:32:11','FATAL','140348317761216','DBLogger','main.cpp','32','测试Fatal日志');");
-    sleep(1);
-    DS.log(str.c_str(),str.size());
-    sleep(5);
+    cout<<"主程序退出"<<endl;
     return 0;
 }
 

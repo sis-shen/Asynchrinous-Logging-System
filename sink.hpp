@@ -56,43 +56,36 @@ namespace suplog{
 
         static void consumer(void* arg)
         {
-            std::cout<<"consumer start"<<std::endl;
             DatabaseSink* ds = (DatabaseSink*)arg;
-            // DBUserConfig::ptr user(DBUserConfig::getInstance());
-            // sql::mysql::MySQL_Driver* driver = sql::mysql::get_driver_instance();
-            // sql::Connection* conn = driver->connect(user->Address(),user->User(),user->Password());
-            // conn->setSchema(user->DataBase());
+
+            DBUserConfig::ptr user(DBUserConfig::getInstance());
+
+            sql::mysql::MySQL_Driver* driver = sql::mysql::get_driver_instance();
+            sql::Connection* conn = driver->connect(user->Address(),user->User(),user->Password());
+            conn->setSchema(user->DataBase());
+            sql::Statement* stm = conn->createStatement();//创建statement用于执行SQL语句
+
             while(true)
             {
-                std::unique_lock<std::mutex> lock(ds->_mutex);
-                if(ds->_running == false && ds->_msgQueue.empty())
+                std::string sql_str;
                 {
-                    return;
+                    std::unique_lock<std::mutex> lock(ds->_mutex);
+                    //这里顺序不能乱， 必须先等待，然后做判断
+                    if(ds->_running)
+                        ds->_pop_con.wait(lock,[&]{
+                            return !ds->_msgQueue.empty() || !ds->_running;
+                        });
+                    if(ds->_running == false && ds->_msgQueue.empty())
+                    {
+                        // std::cout<<"子线程退出\n";
+                        exit(0);//线程退出
+                    }
+                    sql_str = ds->_msgQueue.front();
+                    ds->_msgQueue.pop();
+                    ds->_push_con.notify_all();
+                    //其次，这里尽量不要对lock进行unlock，用花括号先定一个作用域就行
                 }
-                ds->_pop_con.wait(lock,[&]{
-                    return !ds->_msgQueue.empty() || !ds->_running;
-                });
-                std::string sql_str = ds->_msgQueue.front();
-                ds->_msgQueue.pop();
-                ds->_push_con.notify_all();
-                lock.unlock();
-
-                // std::string sql_str("insert into log values(FROM_UNIXTIME(1731732725),'2024/11/16 12:52:05','FATAL','140052844003008','DBLogger','main.cpp','22','测试Fatal日志');");
-
-                std::cout<<"提取数据"<<sql_str<<std::endl;
-
-                DBUserConfig::ptr user(DBUserConfig::getInstance());
-                std::cout<<"获取信息"<<std::endl;
-
-                sql::mysql::MySQL_Driver* driver = sql::mysql::get_driver_instance();
-                std::cout<<"获取driver"<<std::endl;
-
-                sql::Connection* conn = driver->connect(user->Address(),user->User(),user->Password());
-                std::cout<<"获取连接"<<std::endl;
-
-                std::cout<<"设置数据库"<<user->DataBase()<<!conn->isClosed()<<std::endl;
-                sql::Statement* stm = conn->createStatement();
-                stm->execute("use MDPLS");
+                //执行mysql语句
                 stm->execute(sql_str);
             }
         }
@@ -107,12 +100,12 @@ namespace suplog{
         }
 
     private:
-        int _reconnect_cnt;
         std::mutex _mutex;
-        std::atomic<bool> _running;
-        std::queue<std::string> _msgQueue;
         std::condition_variable _push_con;
         std::condition_variable _pop_con;
+        int _reconnect_cnt;
+        std::atomic<bool> _running;
+        std::queue<std::string> _msgQueue;
         std::thread _t;
     };
 
