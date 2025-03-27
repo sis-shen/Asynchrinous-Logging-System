@@ -8,12 +8,8 @@ using namespace std;
 //彩色字体输出测试
 int main()
 {
-    auto root = suplog::rootLogger();
-    root->debug("测试");
-    root->info("测试");
-    root->warn("测试");
-    root->error("测试");
-    root->fatal("测试");
+    
+
     return 0;
 }
 
